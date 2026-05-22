@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  name        String
+  avatar      String?
+  // 期待值：senior(前辈) / bestie(死党) / casual(泛交)
+  level       String   @default("casual")
+  // 一句话记忆锚点
+  memory      String   @default("")
+  // 领域标签：科研/游戏/职场/旧友
+  tags        String   @default("")
+  // 上次互动时间
+  lastContact DateTime @default(now())
+  // 被忽略次数（破冰建议被划掉）
+  ignoreCount Int      @default(0)
+  // 是否已沉淀
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  moments      Moment[]
+  interactions Interaction[]
+  icebreakers  Icebreaker[]
+}
+
+model Moment {
+  id        String   @id @default(cuid())
+  contactId String
+  content   String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model Interaction {
+  id        String   @id @default(cuid())
+  contactId String
+  // chat / like / icebreak
+  type      String
+  content   String?
+  createdAt DateTime @default(now())
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model Icebreaker {
+  id        String   @id @default(cuid())
+  contactId String
+  trigger   String   // 触发原因：moment/weather/news/idle
+  respect   String
+  neutral   String
+  casual    String
+  used      Boolean  @default(false)
+  ignored   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}

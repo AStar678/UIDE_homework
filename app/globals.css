@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background: #FAF7F2;
+  color: #2A2A2A;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+}
+
+.btn-primary {
+  @apply px-4 py-2 rounded-full bg-echo-ink text-white text-sm font-medium hover:opacity-90 transition;
+}
+
+.btn-ghost {
+  @apply px-4 py-2 rounded-full text-sm text-echo-ink/70 hover:bg-black/5 transition;
+}
+
+.card {
+  @apply rounded-2xl bg-white border border-black/5 shadow-sm;
+}
+
+.frozen-avatar {
+  filter: grayscale(0.6) brightness(0.95);
+}
