@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>社交回声 · 中保真原型</title>
+  <style>
+    /* ========== 全局基础样式 ========== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #f5f5f5;
+      color: #2c2c2c;
+      font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    a { color: inherit; text-decoration: none; }
+    button {
+      font: inherit; cursor: pointer;
+      background: #fff; border: 1px solid #c8c8c8; color: #333;
+      padding: 6px 14px; border-radius: 3px;
+    }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    input, textarea, select {
+      font: inherit; width: 100%;
+      background: #fff; border: 1px solid #c8c8c8; color: #333;
+      padding: 6px 10px; border-radius: 3px;
+    }
+    .btn-primary { background: #2c2c2c; color: #fff; border-color: #2c2c2c; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .col { display: flex; flex-direction: column; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+    .muted { color: #888; font-size: 12px; }
+    .title { font-size: 18px; font-weight: 600; }
+    .section-title {
+      color: #888; font-size: 11px; letter-spacing: 2px;
+      text-align: center; margin: 16px 0 10px;
+    }
+    .placeholder {
+      border: 1px dashed #c8c8c8; border-radius: 3px;
+      padding: 14px; text-align: center; color: #888;
+      background: #fafafa;
+    }
+
+    /* ========== 应用框架 ========== */
+    .app-shell { max-width: 960px; margin: 0 auto; padding: 16px; }
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; margin-bottom: 16px;
+      background: #fff; border: 1px solid #ddd; border-radius: 4px;
+    }
+    .nav .brand { font-size: 13px; color: #444; letter-spacing: 1px; }
+    .nav .links { display: flex; gap: 6px; flex-wrap: wrap; }
+    .nav a {
+      padding: 4px 10px; font-size: 13px; color: #666;
+      border: 1px solid transparent; border-radius: 3px;
+    }
+    .nav a.active { background: #2c2c2c; color: #fff; border-color: #2c2c2c; }
+    .badge {
+      display: inline-block; min-width: 16px; height: 16px;
+      padding: 0 4px; margin-left: 4px; font-size: 10px; line-height: 16px;
+      text-align: center; color: #fff; background: #a04a3f;
+      border-radius: 8px; vertical-align: 1px;
+    }
+
+    /* ========== 卡片 / Tag / 头像 / 进度条 ========== */
+    .box { background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 14px; }
+    .box-dashed { border-style: dashed; background: #fafafa; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: #eee; border: 1px solid #ccc;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .avatar.frozen { filter: grayscale(1) brightness(0.85); position: relative; }
+    .avatar.frozen::after {
+      content: "❄"; position: absolute; right: -2px; bottom: -2px;
+      font-size: 10px; background: #fff; border: 1px solid #ccc;
+      width: 14px; height: 14px; border-radius: 50%; line-height: 12px;
+    }
+    .tag {
+      display: inline-block; padding: 1px 6px; font-size: 11px;
+      border: 1px solid #c8c8c8; border-radius: 2px; margin-right: 4px;
+    }
+    .tag-warm   { background: #f6ead8; border-color: #c79a6a; color: #6f4d24; }
+    .tag-cool   { background: #ededed; border-color: #999;    color: #555; }
+    .tag-frozen { background: #e0e6ec; border-color: #6a8caa; color: #2f4d6e; }
+    .bar { width: 80px; height: 4px; background: #eee; border-radius: 2px; overflow: hidden; display: inline-block; }
+    .bar-fill { height: 100%; background: #888; transition: width 0.4s; }
+    .bar-fill.warm   { background: #c79a6a; }
+    .bar-fill.cool   { background: #999; }
+    .bar-fill.frozen { background: #6a8caa; }
+
+    /* ========== 三语气文案卡片 ========== */
+    .draft-card { border: 1px solid #ddd; border-radius: 4px; padding: 12px; margin-bottom: 10px; }
+    .draft-card.respect { background: #f8f4ee; border-color: #c79a6a; }
+    .draft-card.neutral { background: #f4f4f4; border-color: #aaa; }
+    .draft-card.casual  { background: #eef2f8; border-color: #6a8caa; }
+    .draft-tone { font-size: 11px; letter-spacing: 1px; color: #888; }
+    .draft-text { margin: 6px 0; line-height: 1.7; }
+
+    /* ========== 开关 ========== */
+    .switch { position: relative; width: 40px; height: 22px; display: inline-block; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; background: #ddd; border: 1px solid #bbb;
+      border-radius: 22px; cursor: pointer; transition: 0.2s;
+    }
+    .slider::before {
+      content: ""; position: absolute; left: 2px; top: 2px;
+      width: 16px; height: 16px; background: #fff; border: 1px solid #999;
+      border-radius: 50%; transition: 0.2s;
+    }
+    input:checked + .slider { background: #6b6b6b; }
+    input:checked + .slider::before { transform: translateX(18px); }
+    input:disabled + .slider { opacity: 0.4; cursor: not-allowed; }
+
+    /* ========== Toast ========== */
+    .toast {
+      position: fixed; left: 50%; bottom: 40px;
+      transform: translateX(-50%);
+      background: #2c2c2c; color: #fff;
+      padding: 8px 18px; border-radius: 4px; font-size: 13px;
+      z-index: 999; opacity: 0.95;
+    }
+
+    /* ========== 朋友圈 ========== */
+    .moment { padding: 14px; border-bottom: 1px dashed #ddd; }
+    .moment-user { font-weight: 600; color: #4a6a8a; margin-bottom: 4px; }
+    .moment-text { line-height: 1.7; margin-bottom: 8px; }
+
+    /* ========== 移动端基本响应 ========== */
+    @media (max-width: 600px) {
+      .nav { flex-direction: column; align-items: stretch; gap: 8px; }
+      .nav .links { justify-content: center; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Vue 3 运行库 -->
+  <script>__VUE_RUNTIME__</script>
+  <!-- Vue Router 运行库 -->
+  <script>__VUE_ROUTER_RUNTIME__</script>
+
+  <!-- ========================================================== -->
+  <!-- 业务代码：以下全部为人类可读源码，可自由修改                 -->
+  <!-- ========================================================== -->
+  <script>
+  (function () {
+    const { createApp, reactive, computed, watch, ref, onMounted } = Vue;
+    const { createRouter, createWebHashHistory, useRouter, useRoute } = VueRouter;
+
+    /* ========== Store · 数据持久化到 localStorage ========== */
+    const STORAGE_KEY = "social-echo-midfi-v1";
+    const SEED = [
+      { name: "陈学长", avatar: "🧑‍🎓", level: "senior", memory: "毕设导师组里带过我，研究脑机接口", tags: "科研,前辈", daysAgo: 120, moment: "新论文 accepted，感谢实验室的小伙伴！" },
+      { name: "林晓棠", avatar: "🌸", level: "bestie", memory: "一起熬夜写过 MySQL 大作业的队友", tags: "旧友,大学", daysAgo: 95, moment: "今天的咖啡有点苦，像我赶 ddl 的人生。" },
+      { name: "Kevin",  avatar: "🎮", level: "bestie", memory: "周末固定开黑搭子，国服韦恩",       tags: "游戏,死党", daysAgo: 18,  moment: "新赛季出了，谁跟我五黑！" },
+      { name: "周老师", avatar: "👔", level: "senior", memory: "实习时的 mentor，分享过很多产品方法论", tags: "职场,前辈", daysAgo: 200, moment: "推荐一篇关于大模型 Agent 综述的好文。" },
+      { name: "小鱼",   avatar: "🐟", level: "casual", memory: "去年行业大会上聊过一次脑机接口",     tags: "泛交,行业", daysAgo: 150, moment: "初雪了，城市突然变得很安静。" },
+      { name: "阿哲",   avatar: "🎸", level: "casual", memory: "民谣音乐节上认识，互留微信后再没说过话", tags: "泛交",   daysAgo: 300, moment: "新歌 demo 录完了，emo 中。" },
+      { name: "Tina",   avatar: "💼", level: "senior", memory: "校招面试官，后来加了好友",            tags: "职场,前辈", daysAgo: 75,  moment: "招人ing，欢迎推荐做产品的同学。" },
+      { name: "大白",   avatar: "🐻", level: "bestie", memory: "高中同桌，互相抄过物理作业",          tags: "旧友,死党", daysAgo: 40,  moment: "回了趟老家，老妈做的红烧肉永远天花板。" },
+    ];
+    const DEFAULT_SETTINGS = {
+      onboarded: false, notifyEnabled: true, ignoreLimit: 3,
+      thresholds: {
+        senior: { warm: 60, frozen: 120 },
+        bestie: { warm: 30, frozen: 60 },
+        casual: { warm: 90, frozen: 180 },
+      },
+    };
+    const makeId = () => Math.random().toString(36).slice(2, 10);
+    function buildSeed() {
+      const now = Date.now();
+      return SEED.map(s => ({
+        id: makeId(), name: s.name, avatar: s.avatar, level: s.level,
+        memory: s.memory, tags: s.tags,
+        lastContact: new Date(now - s.daysAgo * 86400000).toISOString(),
+        ignoreCount: 0, archived: false,
+        latestMoment: s.moment,
+        momentTime: new Date(now - Math.random() * 7 * 86400000).toISOString(),
+        history: [],
+      }));
+    }
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const data = JSON.parse(raw);
+          data.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings || {});
+          return data;
+        }
+      } catch(e) {}
+      return { contacts: buildSeed(), settings: Object.assign({}, DEFAULT_SETTINGS) };
+    }
+    const store = reactive(loadStore());
+    watch(() => store, v => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch(e) {} }, { deep: true });
+
+    function findContact(id) { return store.contacts.find(c => c.id === id); }
+    function addContact(form) {
+      const c = {
+        id: makeId(), name: form.name, avatar: form.avatar || "👤",
+        level: form.level || "casual", memory: form.memory || "", tags: form.tags || "",
+        lastContact: new Date(Date.now() - (Number(form.daysAgo) || 0) * 86400000).toISOString(),
+        ignoreCount: 0, archived: false, latestMoment: "", momentTime: new Date().toISOString(),
+        history: [],
+      };
+      store.contacts.unshift(c);
+      return c;
+    }
+    function markUsed(id, drafts, trigger, tone) {
+      const c = findContact(id); if (!c) return;
+      c.history.unshift({ trigger, drafts, tone, used: true, ignored: false, ts: new Date().toISOString() });
+      c.lastContact = new Date().toISOString(); c.ignoreCount = 0; c.archived = false;
+    }
+    function markIgnored(id, drafts, trigger) {
+      const c = findContact(id); if (!c) return;
+      c.history.unshift({ trigger, drafts, tone: null, used: false, ignored: true, ts: new Date().toISOString() });
+      c.ignoreCount = (c.ignoreCount || 0) + 1;
+      if (c.ignoreCount >= (store.settings.ignoreLimit || 3)) c.archived = true;
+    }
+    function interactMoment(id, type) {
+      const c = findContact(id); if (!c) return;
+      c.lastContact = new Date().toISOString(); c.ignoreCount = 0; c.archived = false;
+      c.history.unshift({ trigger: type === "like" ? "点赞动态" : "回复动态", drafts: null, tone: null, used: true, ignored: false, ts: new Date().toISOString() });
+    }
+    function clearAllData() {
+      store.contacts = buildSeed();
+      store.settings = Object.assign({}, DEFAULT_SETTINGS, { onboarded: true });
+    }
+
+    /* ========== Utils · 温度算法 + 文案模板 ========== */
+    function daysSince(date) { return Math.floor((Date.now() - new Date(date).getTime()) / 86400000); }
+    function temperature(level, lastContact) {
+      const t = store.settings.thresholds[level] || store.settings.thresholds.casual;
+      const days = daysSince(lastContact);
+      if (days <= t.warm) return Math.max(60, 100 - (days / t.warm) * 40);
+      if (days >= t.frozen) return Math.max(0, 20 - (days - t.frozen) / 10);
+      return 60 - ((days - t.warm) / (t.frozen - t.warm)) * 40;
+    }
+    function statusOf(temp) {
+      if (temp >= 60) return "warm";
+      if (temp >= 25) return "cool";
+      return "frozen";
+    }
+    const STATUS_LABEL = { warm: "温热", cool: "常温", frozen: "结冰" };
+    const LEVEL_LABEL  = { senior: "前辈", bestie: "死党", casual: "泛交" };
+
+    function generateDrafts({ name, level, memory, trigger }) {
+      const m = memory || "之前的事";
+      const t = trigger || "想起了你";
+      const T = {
+        senior: {
+          respect: `${name}好，刚看到${t}，让我想起当年${m}的时候。不用专门回我，看到就好~`,
+          neutral: `${name}！${t}让我突然想起你，还记得${m}吗？最近怎么样，有空再聊。`,
+          casual:  `哈喽${name}，${t}你看了吗？瞬间想起${m}哈哈，有空唠两句。`,
+        },
+        bestie: {
+          respect: `诶${name}，${t}让我想起${m}那段日子，挺感慨的。回不回都行~`,
+          neutral: `${name}！${t}是不是又戳中你了哈哈，记得${m}吗？冒个泡。`,
+          casual:  `${name}！！${t}有没有！${m}那时候我俩也是绝了哈哈，唠会儿不？`,
+        },
+        casual: {
+          respect: `${name}你好，看到${t}，想起之前${m}，问候一下。看到不用回。`,
+          neutral: `${name}，${t}让我想到你，记得${m}，最近还好吗？随便聊聊。`,
+          casual:  `Hi ${name}，${t}让我想起${m}哈哈，最近咋样？看到再说。`,
+        },
+      };
+      return T[level] || T.casual;
+    }
+
+    /* ========== Toast ========== */
+    const toastMsg = ref("");
+    let toastTimer;
+    function toast(msg) {
+      toastMsg.value = msg;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastMsg.value = "", 2000);
+    }
+
+    /* ========== 页面：首页 ========== */
+    const Home = {
+      template: `
+        <div class="col" style="gap:16px">
+          <div class="box" style="text-align:center; padding:36px 16px">
+            <div class="muted" style="letter-spacing:2px">[ LOGO 占位 ]</div>
+            <h1 style="font-size:26px; margin:14px 0 6px">社交回声 Social Echo</h1>
+            <div class="muted">终结"改天请你吃饭"——你的私人社交助理</div>
+            <div class="row" style="justify-content:center; margin-top:18px">
+              <router-link to="/echo" class="btn-primary" style="padding:8px 16px; border-radius:3px">进入主产品 →</router-link>
+              <router-link to="/social" class="btn" style="padding:8px 16px; border-radius:3px; border:1px solid #c8c8c8">查看模拟朋友圈</router-link>
+            </div>
+          </div>
+          <div class="section-title">— 核心功能 —</div>
+          <div class="grid">
+            <div v-for="f in features" :key="f.title" class="box box-dashed">
+              <div class="muted" style="font-size:11px">[ {{ f.tag }} ]</div>
+              <div style="font-weight:600; margin:6px 0 4px">{{ f.title }}</div>
+              <div class="muted">{{ f.desc }}</div>
+            </div>
+          </div>
+        </div>`,
+      setup() {
+        const features = [
+          { tag: "MODULE 01", title: "结冰预警", desc: "重要联系人超期未联系，头像视觉化结冰" },
+          { tag: "MODULE 02", title: "破冰投喂", desc: "基于动态/天气/资讯，生成三种语气文案" },
+          { tag: "MODULE 03", title: "体面放弃", desc: "连续 N 次忽略 → 自然沉淀，消除负罪感" },
+        ];
+        return { features };
+      }
+    };
+
+    /* ========== 页面：引导 Onboarding ========== */
+    const Onboarding = {
+      template: `
+        <div style="max-width:540px; margin:30px auto">
+          <div class="box" style="padding:24px">
+            <div class="row" style="gap:4px; margin-bottom:20px">
+              <div v-for="i in 3" :key="i" class="bar" style="flex:1">
+                <div class="bar-fill" :class="step >= i ? 'warm' : ''" :style="{ width: step >= i ? '100%' : '0%' }"></div>
+              </div>
+            </div>
+            <div v-if="step === 1">
+              <div class="muted" style="letter-spacing:2px">[ STEP 1/3 ]</div>
+              <h2 style="margin:8px 0 12px">先聊聊你的"通讯录"</h2>
+              <p style="color:#555; line-height:1.8">
+                你的微信里，是不是也躺着一些<b>熟悉又陌生</b>的名字？<br>
+                曾经一起熬夜写代码、行业活动相谈甚欢，但对话框停在了半年前。<br><br>
+                社交回声不替你寒暄，只在<b>合适的时机</b>给你一个<b>顺手</b>的开口理由。
+              </p>
+              <div class="placeholder" style="margin-top:14px">[ 插画占位 · 通讯录沉睡示意图 ]</div>
+            </div>
+            <div v-else-if="step === 2">
+              <div class="muted" style="letter-spacing:2px">[ STEP 2/3 ]</div>
+              <h2 style="margin:8px 0 12px">三件事，社交回声只做这三件</h2>
+              <div class="col" style="gap:10px; margin-top:14px">
+                <div class="box box-dashed"><b>① 结冰预警</b><div class="muted" style="margin-top:4px">超期未联系 → 头像视觉化结冰</div></div>
+                <div class="box box-dashed"><b>② 破冰投喂</b><div class="muted" style="margin-top:4px">尊敬/平和/随意三种语气可选</div></div>
+                <div class="box box-dashed"><b>③ 体面放弃</b><div class="muted" style="margin-top:4px">连续 3 次忽略 → 自然沉淀</div></div>
+              </div>
+            </div>
+            <div v-else>
+              <div class="muted" style="letter-spacing:2px">[ STEP 3/3 ]</div>
+              <h2 style="margin:8px 0 12px">隐私承诺</h2>
+              <ul style="color:#555; line-height:1.9; padding-left:20px">
+                <li>所有联系人 / 记忆锚点 <b>仅存于本机</b></li>
+                <li>不读取、不上传你的真实通讯录</li>
+                <li>仅在你主动点击「生成文案」时调用 AI</li>
+                <li>随时可在设置中清除全部数据</li>
+              </ul>
+              <div class="box box-dashed" style="margin-top:14px">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer">
+                  <input type="checkbox" v-model="agree" style="width:auto" />
+                  我已阅读并同意上述隐私承诺
+                </label>
+              </div>
+            </div>
+            <div class="row" style="justify-content:space-between; margin-top:20px">
+              <button v-if="step > 1" class="btn" @click="step--">← 上一步</button>
+              <span v-else class="muted" style="cursor:pointer" @click="finish">跳过引导 →</span>
+              <button v-if="step < 3" class="btn-primary" @click="step++">下一步</button>
+              <button v-else class="btn-primary" :disabled="!agree" @click="finish">开始使用</button>
+            </div>
+          </div>
+        </div>`,
+      setup() {
+        const step = ref(1), agree = ref(false);
+        const router = useRouter();
+        function finish() { store.settings.onboarded = true; router.replace("/echo"); }
+        return { step, agree, finish };
+      }
+    };
+
+    /* ========== 页面：卡片墙 Echo ========== */
+    const Echo = {
+      template: `
+        <div class="col" style="gap:14px">
+          <div class="row" style="justify-content:space-between">
+            <div><h2 class="title">我的回声</h2><div class="muted">温度从低到高排序，结冰联系人优先</div></div>
+            <button class="btn-primary" @click="showAdd = true">+ 添加</button>
+          </div>
+          <div class="row" style="gap:14px; font-size:12px">
+            <span class="tag tag-warm">温热 {{ stat.warm }}</span>
+            <span class="tag tag-cool">常温 {{ stat.cool }}</span>
+            <span class="tag tag-frozen">结冰 {{ stat.frozen }}</span>
+            <span class="muted">沉淀 {{ stat.archived }}</span>
+          </div>
+          <div class="grid">
+            <router-link v-for="c in activeList" :key="c.id" :to="'/echo/contact/' + c.id" class="box" style="display:block">
+              <div class="row" style="justify-content:space-between">
+                <div class="row">
+                  <div class="avatar" :class="{ frozen: c.status === 'frozen' }">{{ c.avatar }}</div>
+                  <div>
+                    <div style="font-weight:600">{{ c.name }}</div>
+                    <div class="muted">{{ levelLabel(c.level) }} · {{ c.days }}天前</div>
+                  </div>
+                </div>
+                <span class="tag" :class="'tag-' + c.status">{{ statusLabel(c.status) }}</span>
+              </div>
+              <div class="muted" style="margin-top:8px; min-height:32px">{{ c.memory || '[ 未填写记忆锚点 ]' }}</div>
+              <div class="row" style="margin-top:8px; gap:8px">
+                <div class="bar" style="flex:1"><div class="bar-fill" :class="c.status" :style="{ width: c.temp + '%' }"></div></div>
+                <span class="muted">{{ Math.round(c.temp) }}°</span>
+              </div>
+            </router-link>
+          </div>
+          <details v-if="archivedList.length > 0" class="box box-dashed">
+            <summary class="muted" style="cursor:pointer">[ 沉淀区 · {{ archivedList.length }} 人，连续被忽略后自然降温 ]</summary>
+            <div class="grid" style="margin-top:10px">
+              <router-link v-for="c in archivedList" :key="c.id" :to="'/echo/contact/' + c.id" class="box" style="display:block; opacity:0.55; border-style:dashed">
+                <div class="row">
+                  <div class="avatar frozen">{{ c.avatar }}</div>
+                  <div>
+                    <div style="font-weight:600">{{ c.name }}</div>
+                    <div class="muted">已沉淀 · {{ c.days }} 天未联系</div>
+                  </div>
+                </div>
+              </router-link>
+            </div>
+          </details>
+
+          <!-- 添加联系人弹层 -->
+          <div v-if="showAdd" style="position:fixed; inset:0; background:rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; z-index:888" @click.self="showAdd = false">
+            <div class="box" style="width:90%; max-width:420px">
+              <h3 class="title" style="margin-bottom:10px">添加联系人</h3>
+              <div class="col" style="gap:8px">
+                <label>姓名 <input v-model="form.name" placeholder="例如：陈学长"></label>
+                <label>头像 emoji <input v-model="form.avatar" placeholder="🐻"></label>
+                <label>关系等级
+                  <select v-model="form.level">
+                    <option value="senior">前辈（导师/上级）</option>
+                    <option value="bestie">死党（挚友/家人）</option>
+                    <option value="casual">泛交（弱连接）</option>
+                  </select>
+                </label>
+                <label>记忆锚点 <textarea v-model="form.memory" rows="2" placeholder="一起做过 / 聊过的事"></textarea></label>
+                <label>标签 <input v-model="form.tags" placeholder="逗号分隔，如：科研,前辈"></label>
+                <label>上次联系（几天前） <input v-model="form.daysAgo" type="number" min="0"></label>
+              </div>
+              <div class="row" style="justify-content:flex-end; margin-top:14px">
+                <button class="btn" @click="showAdd = false">取消</button>
+                <button class="btn-primary" @click="onSave">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>`,
+      setup() {
+        const showAdd = ref(false);
+        const form = ref({ name: "", avatar: "", level: "casual", memory: "", tags: "", daysAgo: 0 });
+        const list = computed(() => store.contacts.map(c => {
+          const temp = temperature(c.level, c.lastContact);
+          return Object.assign({}, c, { temp, status: statusOf(temp), days: daysSince(c.lastContact) });
+        }));
+        const activeList = computed(() => list.value.filter(c => !c.archived).sort((a,b) => a.temp - b.temp));
+        const archivedList = computed(() => list.value.filter(c => c.archived));
+        const stat = computed(() => {
+          const r = { warm: 0, cool: 0, frozen: 0, archived: archivedList.value.length };
+          activeList.value.forEach(c => r[c.status]++);
+          return r;
+        });
+        function onSave() {
+          if (!form.value.name) return toast("请填写姓名");
+          addContact(form.value);
+          showAdd.value = false;
+          form.value = { name: "", avatar: "", level: "casual", memory: "", tags: "", daysAgo: 0 };
+          toast("已添加");
+        }
+        return { showAdd, form, activeList, archivedList, stat, onSave,
+          levelLabel: lv => LEVEL_LABEL[lv], statusLabel: s => STATUS_LABEL[s] };
+      }
+    };
+
+    /* ========== 页面：联系人详情 + 破冰 ========== */
+    const ContactDetail = {
+      template: `
+        <div v-if="!c" class="placeholder">[ 联系人不存在 ]</div>
+        <div v-else class="col" style="gap:14px">
+          <router-link to="/echo" class="muted">← 返回卡片墙</router-link>
+          <div class="box">
+            <div class="row" style="gap:14px">
+              <div class="avatar" :class="{ frozen: status === 'frozen' }" style="width:64px; height:64px; font-size:28px">{{ c.avatar }}</div>
+              <div style="flex:1">
+                <h2 class="title">{{ c.name }} <span class="tag" :class="'tag-' + status" style="margin-left:8px">{{ statusLabel(status) }}</span></h2>
+                <div class="muted">{{ levelLabel(c.level) }} · 已 {{ daysSince(c.lastContact) }} 天未联系</div>
+                <div class="muted" style="margin-top:4px">[ 记忆锚点 ] {{ c.memory || '未填写' }}</div>
+              </div>
+            </div>
+            <div class="row" style="margin-top:12px; gap:8px">
+              <div class="bar" style="flex:1; height:8px"><div class="bar-fill" :class="status" :style="{ width: temp + '%' }"></div></div>
+              <span style="font-weight:600">{{ Math.round(temp) }}°</span>
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="muted">📍 触发理由（可编辑）</div>
+            <textarea v-model="trigger" rows="2" style="margin-top:6px" placeholder="例如：ta 最近发了一条朋友圈"></textarea>
+            <div class="row" style="margin-top:10px; justify-content:space-between">
+              <button class="btn-primary" :disabled="loading" @click="onGenerate">{{ loading ? '生成中…' : '✨ 生成破冰文案' }}</button>
+              <button v-if="drafts" class="btn btn-sm" @click="onIgnoreAll">× 都不喜欢</button>
+            </div>
+          </div>
+
+          <div v-if="loading" class="placeholder">[ AI 思考中…骨架屏占位 ]</div>
+
+          <div v-if="drafts" class="col" style="gap:8px">
+            <div class="section-title">— 三种语气，按你心情选 —</div>
+            <div v-for="(text, tone) in drafts" :key="tone" class="draft-card" :class="tone">
+              <div class="draft-tone">[ {{ toneLabel(tone) }} ]</div>
+              <div class="draft-text">{{ text }}</div>
+              <div class="row" style="justify-content:flex-end">
+                <button class="btn btn-sm" @click="onUse(tone)">📋 用此条</button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="c.history.length > 0" class="box box-dashed">
+            <div class="section-title" style="margin:0 0 8px">— 最近互动历史 —</div>
+            <div v-for="(h, i) in c.history.slice(0, 5)" :key="i" style="font-size:12px; padding:4px 0; border-bottom:1px dashed #ddd">
+              <span class="muted">{{ formatTime(h.ts) }}</span> ·
+              <span v-if="h.used" class="tag tag-warm">已使用</span>
+              <span v-else-if="h.ignored" class="tag tag-cool">已忽略</span>
+              · {{ h.trigger }}
+            </div>
+          </div>
+        </div>`,
+      setup() {
+        const route = useRoute();
+        const id = route.params.id;
+        const c = computed(() => findContact(id));
+        const trigger = ref("");
+        const drafts = ref(null);
+        const loading = ref(false);
+        const temp = computed(() => c.value ? temperature(c.value.level, c.value.lastContact) : 0);
+        const status = computed(() => statusOf(temp.value));
+
+        onMounted(() => {
+          if (c.value && c.value.latestMoment) {
+            trigger.value = `ta 最近发了："${c.value.latestMoment}"`;
+          } else {
+            trigger.value = "好久不见，借天气问候一下";
+          }
+        });
+
+        function onGenerate() {
+          if (!c.value) return;
+          loading.value = true;
+          setTimeout(() => {
+            drafts.value = generateDrafts({
+              name: c.value.name, level: c.value.level,
+              memory: c.value.memory, trigger: trigger.value,
+            });
+            loading.value = false;
+          }, 600);
+        }
+        function onUse(tone) {
+          const text = drafts.value[tone];
+          try { navigator.clipboard.writeText(text); } catch(e) {}
+          markUsed(id, drafts.value, trigger.value, tone);
+          toast("已复制到剪贴板，温度已回升");
+          drafts.value = null;
+        }
+        function onIgnoreAll() {
+          markIgnored(id, drafts.value, trigger.value);
+          drafts.value = null;
+          if (c.value && c.value.archived) toast("已沉淀，仍可在沉淀区找到");
+          else toast("我们记下了");
+        }
+        function formatTime(ts) {
+          return new Date(ts).toLocaleString("zh-CN", { month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+        }
+        return { c, trigger, drafts, loading, temp, status,
+          onGenerate, onUse, onIgnoreAll, formatTime, daysSince,
+          statusLabel: s => STATUS_LABEL[s], levelLabel: lv => LEVEL_LABEL[lv],
+          toneLabel: t => ({ respect:"尊敬", neutral:"平和", casual:"随意" }[t]) };
+      }
+    };
+
+    /* ========== 页面：通知中心 ========== */
+    const Notifications = {
+      template: `
+        <div class="col" style="gap:14px">
+          <div><h2 class="title">通知中心</h2><div class="muted">无打扰式提醒 · 仅展示需要你关注的</div></div>
+          <div v-if="frozenList.length === 0 && historyList.length === 0" class="placeholder" style="padding:36px">
+            [ 暂无新通知 ]<br><br><span class="muted">通讯录里的关系都还在合理温度内 ✨</span>
+          </div>
+          <div v-if="frozenList.length > 0">
+            <div class="section-title">— 结冰预警 ❄ —</div>
+            <div class="col" style="gap:8px">
+              <router-link v-for="c in frozenList" :key="c.id" :to="'/echo/contact/' + c.id" class="box" style="display:block">
+                <div class="row" style="justify-content:space-between">
+                  <div class="row">
+                    <div class="avatar frozen">{{ c.avatar }}</div>
+                    <div>
+                      <div style="font-weight:600">{{ c.name }} <span class="tag tag-frozen">已结冰</span></div>
+                      <div class="muted">已 {{ c.days }} 天未联系</div>
+                    </div>
+                  </div>
+                  <span class="btn btn-sm btn-primary" style="background:#2c2c2c; color:#fff; border-color:#2c2c2c">去破冰 →</span>
+                </div>
+                <div class="muted" style="margin-top:8px; padding:8px; border:1px dashed #ccc; border-radius:3px; font-size:12px">
+                  <b>触发建议：</b>{{ c.suggestedTrigger }}
+                </div>
+              </router-link>
+            </div>
+          </div>
+          <div v-if="historyList.length > 0">
+            <div class="section-title">— 最近的破冰建议 —</div>
+            <div v-for="h in historyList" :key="h.ts" class="box" style="font-size:13px">
+              <div class="row" style="justify-content:space-between">
+                <div><b>{{ h.contactName }}</b> <span class="muted" style="margin-left:6px">{{ formatTime(h.ts) }}</span></div>
+                <span v-if="h.used" class="tag tag-warm">已使用</span>
+                <span v-else-if="h.ignored" class="tag tag-cool">已忽略</span>
+              </div>
+              <div class="muted" style="margin-top:4px">{{ h.trigger }}</div>
+            </div>
+          </div>
+          <details class="box box-dashed">
+            <summary class="muted" style="cursor:pointer">[ 系统会基于哪些事件提醒你？ ]</summary>
+            <div class="muted" style="margin-top:10px; line-height:1.7; font-size:12px">
+              · <b>时间维度：</b>超过期待值阈值未联系<br>
+              · <b>资讯维度：</b>对方关注领域出现新论文 / 行业热点<br>
+              · <b>动态维度：</b>对方发布朋友圈 / 状态更新<br>
+              · <b>环境维度：</b>初雪、节假日、共同游戏赛季等
+            </div>
+          </details>
+        </div>`,
+      setup() {
+        const frozenList = computed(() =>
+          store.contacts.filter(c => !c.archived).map(c => {
+            const temp = temperature(c.level, c.lastContact);
+            return Object.assign({}, c, { temp, days: daysSince(c.lastContact),
+              suggestedTrigger: c.latestMoment ? `ta 最近发了："${c.latestMoment}"` : "好久不见，借天气问候一下" });
+          }).filter(c => statusOf(c.temp) === "frozen").sort((a,b) => b.days - a.days)
+        );
+        const historyList = computed(() => {
+          const all = [];
+          store.contacts.forEach(c => {
+            c.history.filter(h => h.drafts).slice(0, 2).forEach(h => all.push(Object.assign({}, h, { contactName: c.name })));
+          });
+          return all.sort((a,b) => new Date(b.ts) - new Date(a.ts)).slice(0, 5);
+        });
+        function formatTime(ts) {
+          return new Date(ts).toLocaleString("zh-CN", { month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+        }
+        return { frozenList, historyList, formatTime };
+      }
+    };
+
+    /* ========== 页面：朋友圈 Social ========== */
+    const Social = {
+      template: `
+        <div class="col" style="gap:14px">
+          <div><h2 class="title">朋友圈（模拟）</h2><div class="muted">他们最近在发什么？点击「让回声给我个开口理由」一键破冰</div></div>
+          <div class="box" style="padding:0">
+            <div v-for="c in moments" :key="c.id" class="moment">
+              <div class="row" style="justify-content:space-between">
+                <div class="row">
+                  <div class="avatar" :class="{ frozen: c.frozen }">{{ c.avatar }}</div>
+                  <div>
+                    <div class="moment-user">{{ c.name }}</div>
+                    <div class="muted" style="font-size:11px">{{ levelLabel(c.level) }} · {{ daysSince(c.momentTime) }} 天前</div>
+                  </div>
+                </div>
+                <span v-if="c.frozen" class="tag tag-frozen">结冰</span>
+              </div>
+              <div class="moment-text">{{ c.latestMoment }}</div>
+              <div class="placeholder" style="height:60px; padding:0; display:flex; align-items:center; justify-content:center; font-size:11px">[ 配图 9 宫格占位 ]</div>
+              <div class="row" style="justify-content:space-between; margin-top:10px">
+                <div class="row" style="gap:14px; font-size:12px; color:#666">
+                  <span style="cursor:pointer" @click="onLike(c.id)">👍 点赞</span>
+                  <span style="cursor:pointer" @click="onReply(c.id)">💬 评论</span>
+                </div>
+                <router-link :to="'/echo/contact/' + c.id" class="btn btn-sm btn-primary" style="background:#2c2c2c; color:#fff; border-color:#2c2c2c">让回声给我个开口理由 ✨</router-link>
+              </div>
+            </div>
+          </div>
+        </div>`,
+      setup() {
+        const moments = computed(() =>
+          store.contacts.filter(c => c.latestMoment).map(c => {
+            const temp = temperature(c.level, c.lastContact);
+            return Object.assign({}, c, { frozen: statusOf(temp) === "frozen" });
+          }).sort((a,b) => new Date(b.momentTime) - new Date(a.momentTime))
+        );
+        function onLike(id) { interactMoment(id, "like"); toast("已点赞，温度回升"); }
+        function onReply(id) { interactMoment(id, "reply"); toast("已记录评论"); }
+        return { moments, onLike, onReply, daysSince, levelLabel: lv => LEVEL_LABEL[lv] };
+      }
+    };
+
+    /* ========== 页面：能量报告 ========== */
+    const Report = {
+      template: `
+        <div class="col" style="gap:14px">
+          <div><h2 class="title">本周能量报告</h2><div class="muted">让你看见每一份用心</div></div>
+          <div class="box" style="text-align:center; padding:24px">
+            <div style="font-size:54px; font-weight:600; color:#c79a6a">{{ score }}</div>
+            <div class="muted">本周社交能量分（百分制）</div>
+            <div style="margin-top:12px; color:#555">{{ comment }}</div>
+          </div>
+          <div class="grid">
+            <div class="box"><div class="muted">主动联系</div><div style="font-size:24px; font-weight:600">{{ stats.used }}</div><div class="muted">次破冰已采纳</div></div>
+            <div class="box"><div class="muted">被动忽略</div><div style="font-size:24px; font-weight:600">{{ stats.ignored }}</div><div class="muted">次未行动</div></div>
+            <div class="box"><div class="muted">体面沉淀</div><div style="font-size:24px; font-weight:600">{{ stats.archived }}</div><div class="muted">人自然降温</div></div>
+          </div>
+          <div class="box">
+            <div class="section-title" style="margin-top:0">— 温度分布 —</div>
+            <div class="row" style="gap:10px; flex-wrap:wrap">
+              <span class="tag tag-warm">温热 {{ dist.warm }}</span>
+              <span class="tag tag-cool">常温 {{ dist.cool }}</span>
+              <span class="tag tag-frozen">结冰 {{ dist.frozen }}</span>
+              <span class="muted">沉淀 {{ dist.archived }}</span>
+            </div>
+          </div>
+          <div v-if="missing.length > 0" class="box box-dashed">
+            <div class="section-title" style="margin-top:0">— 你可能正在错过 —</div>
+            <router-link v-for="c in missing" :key="c.id" :to="'/echo/contact/' + c.id" class="row" style="padding:6px 0; border-bottom:1px dashed #ddd; gap:10px">
+              <div class="avatar frozen" style="width:32px; height:32px; font-size:14px">{{ c.avatar }}</div>
+              <div style="flex:1"><b>{{ c.name }}</b><div class="muted">已 {{ c.days }} 天未联系</div></div>
+              <span class="muted">→</span>
+            </router-link>
+          </div>
+        </div>`,
+      setup() {
+        const stats = computed(() => {
+          let used = 0, ignored = 0, archived = 0;
+          store.contacts.forEach(c => {
+            c.history.forEach(h => { if (h.used) used++; if (h.ignored) ignored++; });
+            if (c.archived) archived++;
+          });
+          return { used, ignored, archived };
+        });
+        const dist = computed(() => {
+          const r = { warm: 0, cool: 0, frozen: 0, archived: 0 };
+          store.contacts.forEach(c => {
+            if (c.archived) { r.archived++; return; }
+            r[statusOf(temperature(c.level, c.lastContact))]++;
+          });
+          return r;
+        });
+        const score = computed(() => Math.min(100, 50 + stats.value.used * 10 - stats.value.ignored * 3 - dist.value.frozen * 4));
+        const comment = computed(() => {
+          const s = score.value;
+          if (s >= 80) return "本周保持得不错，温热联系人占多数 ✨";
+          if (s >= 60) return "节奏还行，但有 " + dist.value.frozen + " 个结冰联系人值得关注";
+          return "有点冷清，要不要选一个最想念的人主动破个冰？";
+        });
+        const missing = computed(() =>
+          store.contacts.filter(c => !c.archived).map(c => Object.assign({}, c, {
+            days: daysSince(c.lastContact),
+            temp: temperature(c.level, c.lastContact),
+          })).filter(c => statusOf(c.temp) === "frozen").slice(0, 3)
+        );
+        return { stats, dist, score, comment, missing };
+      }
+    };
+
+    /* ========== 页面：设置 ========== */
+    const Settings = {
+      template: `
+        <div class="col" style="gap:14px; max-width:640px">
+          <div><h2 class="title">设置</h2><div class="muted">个性化你的提醒节奏与隐私偏好</div></div>
+          <div class="box">
+            <div class="section-title" style="margin-top:0">— 提醒 —</div>
+            <div class="row" style="justify-content:space-between">
+              <div><b>启用提醒</b><div class="muted">关闭后，不再接收任何破冰建议</div></div>
+              <label class="switch"><input type="checkbox" v-model="s.notifyEnabled"><span class="slider"></span></label>
+            </div>
+            <div class="row" style="justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px dashed #ddd">
+              <div><b>「体面放弃」阈值</b><div class="muted">连续被忽略 N 次后自动沉淀</div></div>
+              <div class="row" style="gap:6px">
+                <button class="btn btn-sm" @click="s.ignoreLimit = Math.max(1, s.ignoreLimit - 1)">−</button>
+                <b style="min-width:24px; text-align:center">{{ s.ignoreLimit }}</b>
+                <button class="btn btn-sm" @click="s.ignoreLimit = Math.min(10, s.ignoreLimit + 1)">+</button>
+              </div>
+            </div>
+          </div>
+          <div class="box">
+            <div class="section-title" style="margin-top:0">— 关系期待值 · 结冰天数 —</div>
+            <div class="muted" style="margin-bottom:10px">超过此天数未联系即被视为"已结冰"</div>
+            <div class="col" style="gap:10px">
+              <div v-for="lv in ['senior','bestie','casual']" :key="lv" class="row" style="justify-content:space-between">
+                <div style="min-width:80px"><b>{{ levelLabel(lv) }}</b><div class="muted">{{ levelDesc(lv) }}</div></div>
+                <div class="row" style="gap:8px; flex:1; max-width:280px">
+                  <input type="range" min="7" max="365" v-model.number="s.thresholds[lv].frozen" style="flex:1">
+                  <span style="min-width:60px; text-align:right">{{ s.thresholds[lv].frozen }} 天</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="box">
+            <div class="section-title" style="margin-top:0">— 隐私 —</div>
+            <div class="muted">本机原型版本：通讯录读取 / 云端同步 始终关闭，所有数据仅存于浏览器</div>
+          </div>
+          <div class="box" style="border-color:#c4928c">
+            <div class="section-title" style="margin-top:0; color:#a04a3f">— 危险区 —</div>
+            <div class="row" style="justify-content:space-between">
+              <div><b>清除全部本地数据</b><div class="muted">联系人、记忆锚点、互动记录将无法恢复</div></div>
+              <button class="btn" @click="onClear" style="border-color:#a04a3f; color:#a04a3f">清除</button>
+            </div>
+          </div>
+          <div class="muted" style="text-align:center; padding:14px 0">Social Echo · 中保真版 v0.1 · 仅用于课堂展示</div>
+        </div>`,
+      setup() {
+        const s = computed(() => store.settings);
+        function onClear() {
+          if (confirm("确定要清除所有数据吗？此操作不可恢复。")) {
+            clearAllData();
+            toast("已重置为初始种子数据");
+          }
+        }
+        return { s, onClear,
+          levelLabel: lv => LEVEL_LABEL[lv],
+          levelDesc: lv => ({ senior:"导师/上级", bestie:"挚友/家人", casual:"弱连接" }[lv]) };
+      }
+    };
+
+    /* ========== App 壳 ========== */
+    const App = {
+      template: `
+        <div class="app-shell">
+          <nav class="nav">
+            <router-link to="/" class="brand">[ 社交回声 · 中保真 ]</router-link>
+            <div class="links">
+              <router-link to="/" :class="{ active: $route.path === '/' }">首页</router-link>
+              <router-link to="/echo" :class="{ active: $route.path.startsWith('/echo') }">主产品</router-link>
+              <router-link to="/notifications" :class="{ active: $route.path === '/notifications' }">
+                通知<span v-if="frozenCount > 0" class="badge">{{ frozenCount }}</span>
+              </router-link>
+              <router-link to="/social" :class="{ active: $route.path === '/social' }">朋友圈</router-link>
+              <router-link to="/report" :class="{ active: $route.path === '/report' }">报告</router-link>
+              <router-link to="/settings" :class="{ active: $route.path === '/settings' }">设置</router-link>
+            </div>
+          </nav>
+          <router-view />
+          <div class="muted" style="text-align:center; margin-top:24px; padding-top:14px; border-top:1px dashed #ddd">
+            Social Echo · 单 HTML 中保真原型 · 数据存于浏览器 localStorage
+          </div>
+          <div v-if="toastMsg" class="toast">{{ toastMsg }}</div>
+        </div>`,
+      setup() {
+        const frozenCount = computed(() =>
+          store.contacts.filter(c => !c.archived)
+            .filter(c => statusOf(temperature(c.level, c.lastContact)) === "frozen").length
+        );
+        return { frozenCount, toastMsg };
+      }
+    };
+
+    /* ========== Router ========== */
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        { path: "/",                   component: Home },
+        { path: "/onboard",            component: Onboarding },
+        { path: "/echo",               component: Echo },
+        { path: "/echo/contact/:id",   component: ContactDetail, props: true },
+        { path: "/notifications",      component: Notifications },
+        { path: "/social",             component: Social },
+        { path: "/report",             component: Report },
+        { path: "/settings",           component: Settings },
+      ],
+    });
+    router.beforeEach((to, _from, next) => {
+      if (!store.settings.onboarded && to.path !== "/onboard") return next("/onboard");
+      next();
+    });
+
+    /* ========== Mount ========== */
+    createApp(App).use(router).mount("#app");
+  })();
+  </script>
+</body>
+</html>
